@@ -24,31 +24,29 @@ public class JingLuoDB {
 	String user = "postgres";
 	String passwd = "post";
 
+	private Connection conn;
+	private Statement stmt;
+	
 	JingLuoDB() {
-
+		try {
+			Class.forName("org.postgresql.Driver");
+			conn = DriverManager.getConnection(url, user, passwd);
+			stmt = conn.createStatement();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
-
-	public String getLine(String name) {
-		// String query = "select json_extract_path( info,'note') from node where name =
-		// ?";
-		String query = "select to_json(array_agg(t)) from v2.lines t where pingying=?";
-		Connection conn = null;
-		PreparedStatement stmt = null;
-		JSONObject json = new JSONObject();
-
+	private String sqlToJSONString(String sql) {
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			stmt.setString(1, name);
-			ResultSet rs = stmt.executeQuery();
+			ResultSet rs = stmt.executeQuery(sql);
 			if (rs.next())
 			return rs.getString(1);
 			// return json;
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
 		} catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
@@ -56,37 +54,18 @@ public class JingLuoDB {
 		} finally {
 		}
 		return null;
+	}
+	public String getLine(String name) {
+		String sql = "select to_json(array_agg(t)) from v2.lines t "
+				+ " where pingying='"+name+"'";
+		return sqlToJSONString(sql);
 	}
 
 	public String getPoint(String name) {
-		// String query = "select json_extract_path( info,'note') from node where name =
-		// ?";
-		String query = "select to_json(array_agg(t)) from v2.points t where name=?";
-		Connection conn = null;
-		PreparedStatement stmt = null;
-		JSONObject json = new JSONObject();
-
-		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			stmt.setString(1, name);
-			ResultSet rs = stmt.executeQuery();
-			if (rs.next())
-			return rs.getString(1);
-			// return json;
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		} catch (SQLException ex) {
-			// insert into duplicate table
-			System.out.println(
-					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		} finally {
-		}
-		return null;
+		String sql = "select to_json(array_agg(t)) from v2.points t "
+				+ " where name='"+name+"'";
+		return sqlToJSONString(sql);
 	}
-
 }
 
 

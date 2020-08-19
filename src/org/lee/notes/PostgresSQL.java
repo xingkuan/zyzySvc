@@ -22,99 +22,67 @@ public class PostgresSQL {
 	String user = "postgres";
 	String passwd = "post";
 
+	private Connection conn = null;
+	private Statement stmt = null;
+
 	PostgresSQL() {
-
-	}
-
-	public boolean addNode(String name, String tmplt, String mt, String sb) {
-		// String query = "INSERT INTO node(name, template_name, val) VALUES(?, ?,
-		// to_json(?::json))";
-		// String queryD = "INSERT INTO node_dup(name, template_name, val) VALUES(?, ?,
-		// to_json(?::json))";
-		String query = "INSERT INTO node(name, template_name, meta, val) VALUES(?, ?, ?, ?)";
-		String queryD = "INSERT INTO node_dup(name, template_name, meta, val) VALUES(?, ?, ?, ?)";
-		Connection conn = null;
-		PreparedStatement stmt = null;
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
+			Class.forName("org.postgresql.Driver");
 			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			stmt.setString(1, name);
-			stmt.setString(2, tmplt);
-			stmt.setString(3, mt);
-			stmt.setString(4, sb);
-			stmt.execute();
-			// conn.commit();
-			// System.out.print("add to PostGress: \n" + sb );
+			stmt = conn.createStatement();
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public boolean addNode(String name, String tmplt, String mt, String sb) {
+		String sql = "INSERT INTO node(name, template_name, meta, val) VALUES "
+				+"('" + name + "', '"+ tmplt + "', '" + mt +"','"+ sb+ "')";
+		try {
+			stmt.execute(sql);
+			conn.commit();
 		} catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
-					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
+				"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
 			if (ex.getSQLState().equals("23505") ) {
 				// Handle Here
 				try {
 					System.out.println(mt);
-//				conn = DriverManager.getConnection(url, user, passwd);
-					Statement stmtx = conn.createStatement();
-					stmtx.executeUpdate("insert into node_dup select * from node where name='"+name+"'");
-					//stmtx.executeUpdate("delete from node where name='"+name+"'");
-				String sqlU = "update node set val = ?, meta= ? where name = ?";	
-				    stmt = conn.prepareStatement(sqlU);
-					stmt.setString(1, sb);
-					stmt.setString(2, mt);
-					stmt.setString(3, name);
-					stmt.execute();
-					// conn.commit();
+					sql = "insert into node_dup select * from node where name='"+name+"'";
+					stmt.execute(sql);
+					//stmt.executeUpdate("delete from node where name='"+name+"'");
+					sql = "update node set val = '"+sb+"', meta= '" + mt + "' where name = '" + name +"'";	
+					stmt.execute(sql);
+					conn.commit();
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
 			}
+		} 
 
-		} finally {
-			try {
-				if (stmt != null)
-					conn.close();
-			} catch (SQLException se) {
-			} // do nothing
-			try {
-				if (conn != null)
-					conn.close();
-			} catch (SQLException se) {
-				se.printStackTrace();
-			}
-		}
 		return true;
 	}
 
 	// public JSONObject getNote(String name) {
 	public String getNote(String name) {
-		// String query = "select json_extract_path( info,'note') from node where name =
-		// ?";
-		String query = "select val,template_name,meta from node where name = ?";
-		Connection conn = null;
-		PreparedStatement stmt = null;
+		String sql = "select val,template_name,meta from node where name = '" + name +"'";
 		JSONObject json = new JSONObject();
 
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			stmt.setString(1, name);
-			ResultSet rs = stmt.executeQuery();
-			if (rs.next())
+			ResultSet rs = stmt.executeQuery(sql);
+			if (rs.next()) {
 				json.put("meta", rs.getString(3));
-			json.put("template", rs.getString(2));
-			json.put("val", rs.getString(1));
-			// return rs.getString(1);
-			return json.toString();
-			// return json;
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
+				json.put("template", rs.getString(2));
+				json.put("val", rs.getString(1));
+				// return rs.getString(1);
+				return json.toString();
+				// return json;
+			}
 		} catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
@@ -125,31 +93,23 @@ public class PostgresSQL {
 	}
 
 	public String getNoteBySeq(int seq) {
-		String query = "select name, meta, val from node where seq = ?";
-		Connection conn = null;
-		PreparedStatement stmt = null;
+		String sql = "select name, meta, val from node where seq = " + seq;
 		JSONObject json = new JSONObject();
 
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			stmt.setInt(1, seq);
-			ResultSet rs = stmt.executeQuery();
-			if (rs.next())
+			ResultSet rs = stmt.executeQuery(sql);
+			if (rs.next()) {
 				json.put("name", rs.getString(1));
 				json.put("meta", rs.getString(2));
 				json.put("val", rs.getString(3));
 				// return rs.getString(1);
 				return json.toString();
-			// return json;
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
+				// return json;
+			}
 		} catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
-					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
+				"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
 		} finally {
 		}
 		return null;
@@ -157,168 +117,95 @@ public class PostgresSQL {
 
 	
 	public boolean addRelation(String sname, String tname, String rel, String info) {
-		// System.out.print("add relation to PostGres: \n" + sb );
-		// String query = "INSERT into relation(s_name, t_name, relation, val) VALUES(?,
-		// ?, ?, to_json(?::json))";
-		// String queryD = "INSERT into relation_dup(s_name, t_name, relation, val)
-		// VALUES(?, ?, ?, to_json(?::json))";
-		String query = "INSERT into relation(s_name, t_name, relation, val) VALUES(?, ?, ?, ?)";
-		String queryD = "INSERT into relation_dup(s_name, t_name, relation, val) VALUES(?, ?, ?, ?)";
-		Connection conn = null;
-		PreparedStatement stmt = null;
-		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
+		String sql = "INSERT into relation(s_name, t_name, relation, val) VALUES "
+				+ "('"+sname+"', '" + tname + "', '"+rel+",'"+info+"')";
 
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			stmt.setString(1, sname);
-			stmt.setString(2, tname);
-			stmt.setString(3, rel);
-			stmt.setString(4, info);
-			stmt.execute();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SQLException ex) {
+		try {
+			stmt.execute(sql);
+			conn.commit();
+		}catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
 					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
 			try {
-				conn = DriverManager.getConnection(url, user, passwd);
-				stmt = conn.prepareStatement(queryD);
-				stmt.setString(1, sname);
-				stmt.setString(2, tname);
-				stmt.setString(3, rel);
-				stmt.setString(4, info);
-				stmt.execute();
+				sql = "INSERT into relation_dup(s_name, t_name, relation, val) VALUES "
+						+ "('"+sname+"', '" + tname + "', '"+rel+",'"+info+"')";
+				stmt.execute(sql);
 				// conn.commit();
 
 				// also add to node, if not exist yet:
-				String st = "INSERT INTO node(name) VALUES(?)";
-				stmt = conn.prepareStatement(st);
-				stmt.setString(1, sname);
-				stmt.execute();
-				stmt.setString(1, tname);
-				stmt.execute();
-
+				sql = "INSERT INTO node(name) VALUES('"+sname+"')";
+				stmt = conn.prepareStatement(sql);
+				sql = "INSERT INTO node(name) VALUES('"+tname+"')";
+				stmt = conn.prepareStatement(sql);
+				conn.commit();
 			} catch (SQLException e) {
 				e.printStackTrace();
 			}
-		} finally {
-			try {
-				if (stmt != null)
-					conn.close();
-			} catch (SQLException se) {
-			} // do nothing
-			try {
-				if (conn != null)
-					conn.close();
-			} catch (SQLException se) {
-				se.printStackTrace();
-			}
-		}
+		} 
+
 		return true;
 	}
 
 	public String getRelationList() {
-		String query = "select array_to_json(array_agg(t)) from relation_list t";
-		Connection conn = null;
-		PreparedStatement stmt = null;
+		String sql = "select array_to_json(array_agg(t)) from relation_list t";
 
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			ResultSet rs = stmt.executeQuery();
+			ResultSet rs = stmt.executeQuery(sql);
 			rs.next();
 
-			// System.out.println(rs.getObject(1).toString());
-			// JSONParser parser = new JSONParser();
-			// JSONArray arrayObj = (JSONArray) parser.parse(rs.getObject(1).toString());
-			// JSONArray jsonArray = (JSONArray)parser.parse(rs.getObject(1).toString());
-			// return jsonArray;
 			return rs.getObject(1).toString();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
 					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		} finally {
 		}
+		
 		return null;
 	}
 
 	public String getTemplateList() {
-		String query = "select array_to_json(array_agg(t)) from (select name from template) t";
-		Connection conn = null;
-		PreparedStatement stmt = null;
+		String sql = "select array_to_json(array_agg(t)) from (select name from template) t";
 
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			ResultSet rs = stmt.executeQuery();
+			ResultSet rs = stmt.executeQuery(sql);
 			rs.next();
 
 			return rs.getObject(1).toString();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
 		} catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
 					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		} finally {
-		}
-		return "{\"nae\", 1}";
+		} 
+
+		return null;
 	}
 
 	public String getTemplate(String name) {
-		String query = "select template from template where name = ?";
-		Connection conn = null;
-		PreparedStatement stmt = null;
+		String sql = "select template from template where name = '"+name+"'";
 
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			stmt.setString(1, name);
-			ResultSet rs = stmt.executeQuery();
+			ResultSet rs = stmt.executeQuery(sql);
 			rs.next();
 
 			return rs.getString(1);
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		} catch (SQLException ex) {
+		}catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
 					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		} finally {
-		}
+		} 
+
 		return null;
 	}
 	
 	// read 百病主治药 and to be displayed in a tree.
 	// not an ideal place for that, but what the heck !
 	public String readBaiBin() {
-		String query = "select regexp_split_to_array(name, ' \\* ') from node where name like '%百病主治药%' order by seq";
-		Connection conn = null;
-		PreparedStatement stmt = null;
+		String sql = "select regexp_split_to_array(name, ' \\* ') from node where name like '%百病主治药%' order by seq";
 		JSONObject json = new JSONObject();
 
-		String url = "jdbc:postgresql://localhost:5432/notes";
-		String user = "postgres";
-		String passwd = "post";
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			ResultSet rs = stmt.executeQuery();
+			ResultSet rs = stmt.executeQuery(sql);
 			
 			int mxI=0, l=0, lvl=0, c[];
 			String[] pC = new String[]{"","","","","","","","","",""};
@@ -331,16 +218,8 @@ public class PostgresSQL {
 			String test="";
 			boolean firstC=true;
 			while (rs.next()) {
-//				System.out.println(l);
 				cC = (String[])rs.getArray(1).getArray();
 				
-			/*	//test
-				for (int i=3; i < cC.length; i++ ) {
-					test=test+cC[i]+" ";
-				}
-				System.out.println(test);
-*/
-				//devl
 				if(l==0) {
 					for (int i=3; i < cC.length - 1; i++ ) {
 							rslt = rslt + "{\"name\": \"" + cC[i] + "\", \"children\": [";
@@ -401,9 +280,7 @@ public class PostgresSQL {
 			rslt="{\"name\": \"诸病\", \"children\": [" + rslt + "]}";
 			System.out.println(rslt);
 			return rslt;
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		} catch (SQLException ex) {
+		}catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
 					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
