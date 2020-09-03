@@ -17,7 +17,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import java.sql.ResultSetMetaData;
 
-public class PostgresSQL {
+public class NotesDB {
 	String url = "jdbc:postgresql://localhost:5432/notes";
 	String user = "postgres";
 	String passwd = "post";
@@ -25,7 +25,7 @@ public class PostgresSQL {
 	private Connection conn = null;
 	private Statement stmt = null;
 
-	PostgresSQL() {
+	NotesDB() {
 		try {
 			Class.forName("org.postgresql.Driver");
 			conn = DriverManager.getConnection(url, user, passwd);
@@ -39,6 +39,28 @@ public class PostgresSQL {
 		}
 	}
 
+	private String sqlToJsonArrayString(String sql) {
+	    JSONArray jsonArray = new JSONArray();
+	   
+		try {
+			ResultSet rs;
+				rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				int columns = rs.getMetaData().getColumnCount();
+				JSONObject obj = new JSONObject();
+	 			for (int i = 0; i < columns; i++)
+	 				obj.put(rs.getMetaData().getColumnLabel(i + 1).toLowerCase(),  rs.getObject(i + 1));
+	 			
+	 			jsonArray.add(obj);
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	    return jsonArray.toString();
+	}
+		
 	public boolean addNode(String name, String tmplt, String mt, String sb) {
 		String sql = "INSERT INTO node(name, template_name, meta, val) VALUES "
 				+"('" + name + "', '"+ tmplt + "', '" + mt +"','"+ sb+ "')";
@@ -67,54 +89,39 @@ public class PostgresSQL {
 
 		return true;
 	}
-
-	// public JSONObject getNote(String name) {
-	public String getNote(String name) {
-		String sql = "select val,template_name,meta from node where name = '" + name +"'";
-		JSONObject json = new JSONObject();
-
+	
+	public boolean saveNode(int seq, String name, String tmplt, String mt, String sb) {
+		String sql; 
 		try {
-			ResultSet rs = stmt.executeQuery(sql);
-			if (rs.next()) {
-				json.put("meta", rs.getString(3));
-				json.put("template", rs.getString(2));
-				json.put("val", rs.getString(1));
-				// return rs.getString(1);
-				return json.toString();
-				// return json;
-			}
-		} catch (SQLException ex) {
-			// insert into duplicate table
-			System.out.println(
-					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		} finally {
-		}
-		return null;
-	}
-
-	public String getNoteBySeq(int seq) {
-		String sql = "select name, meta, val from node where seq = " + seq;
-		JSONObject json = new JSONObject();
-
-		try {
-			ResultSet rs = stmt.executeQuery(sql);
-			if (rs.next()) {
-				json.put("name", rs.getString(1));
-				json.put("meta", rs.getString(2));
-				json.put("val", rs.getString(3));
-				// return rs.getString(1);
-				return json.toString();
-				// return json;
-			}
+			sql = "update node set ver = ver+1 where seq="+seq;
+			stmt.execute(sql);
+			sql = "INSERT INTO node(seq, name, template_name, meta, val) VALUES "
+					+"(" + seq + ",'" + name + "', '"+ tmplt + "', '" + mt +"','"+ sb+ "')";
+			stmt.execute(sql);
+			conn.commit();
 		} catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(
 				"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		} finally {
-		}
-		return null;
+		} 
+		return true;
 	}
 
+	// public JSONObject getNote(String name) {
+	public String getNote(String name, int ver) {
+		String sql = "select name, val,template_name,meta from node where name = '" + name +"' and ver="+ver;
+		return sqlToJsonArrayString(sql);
+	}
+
+	public String getNoteBySeq(int seq, int ver) {
+		String sql = "select name, val,template_name,meta from node where seq = " + seq +" and ver="+ver;
+		return sqlToJsonArrayString(sql);
+	}
+
+	public String getNoteVers(int seq) {
+		String sql = "select ver from node where seq = " + seq;
+		return sqlToJsonArrayString(sql);
+	}
 	
 	public boolean addRelation(String sname, String tname, String rel, String info) {
 		String sql = "INSERT into relation(s_name, t_name, relation, val) VALUES "
@@ -148,60 +155,30 @@ public class PostgresSQL {
 	}
 
 	public String getRelationList() {
-		String sql = "select array_to_json(array_agg(t)) from relation_list t";
-
-		try {
-			ResultSet rs = stmt.executeQuery(sql);
-			rs.next();
-
-			return rs.getObject(1).toString();
-		} catch (SQLException ex) {
-			// insert into duplicate table
-			System.out.println(
-					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		}
-		
-		return null;
+		String sql = "select * from relation_list";
+		return sqlToJsonArrayString(sql);
+	}
+	public String getRelation(String rel) {
+		String sql = "select text from relation_list where val = '"+rel+"'";
+		return sqlToJsonArrayString(sql);
 	}
 
 	public String getTemplateList() {
-		String sql = "select array_to_json(array_agg(t)) from (select name from template) t";
-
-		try {
-			ResultSet rs = stmt.executeQuery(sql);
-			rs.next();
-
-			return rs.getObject(1).toString();
-		} catch (SQLException ex) {
-			// insert into duplicate table
-			System.out.println(
-					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		} 
-
-		return null;
+		String sql = "select name from template";
+		return sqlToJsonArrayString(sql);
 	}
 
 	public String getTemplate(String name) {
 		String sql = "select template from template where name = '"+name+"'";
-
-		try {
-			ResultSet rs = stmt.executeQuery(sql);
-			rs.next();
-
-			return rs.getString(1);
-		}catch (SQLException ex) {
-			// insert into duplicate table
-			System.out.println(
-					"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
-		} 
-
-		return null;
+		return sqlToJsonArrayString(sql);
 	}
 	
 	// read 百病主治药 and to be displayed in a tree.
 	// not an ideal place for that, but what the heck !
 	public String readBaiBin() {
-		String sql = "select regexp_split_to_array(name, ' \\* ') from node where name like '%百病主治药%' order by seq";
+		String sql = "select regexp_split_to_array(name, ' \\* ') "
+				+ "from node where name like '%百病主治药%' "
+				+ "order by seq";
 		JSONObject json = new JSONObject();
 
 		try {
@@ -290,20 +267,16 @@ public class PostgresSQL {
 	}
 	
 	public String parseHerbNames() {
-		String query = "select name, count(1), string_agg(distinct cat, ',') from (select distinct name[4] ||'|'||name[5] cat, trim(both unnest(regexp_split_to_array(val, ':|,'))) as name from (select regexp_split_to_array(name, ' \\* ') as name,unnest(REGEXP_MATCHES(val,'<span class=\"sec-title\">(.*?)</span>', 'g')) val from node where name like '%百病主治药%' ) as t ) as p where name !='' group by name ";
-		Connection conn = null;
-		PreparedStatement stmt = null;
+		String query = "select name, count(1), string_agg(distinct cat, ',') "
+				+ "from (select distinct name[4] ||'|'||name[5] cat, trim(both unnest(regexp_split_to_array(val, ':|,'))) as name "
+				+       "from (select regexp_split_to_array(name, ' \\* ') as name,unnest(REGEXP_MATCHES(val,'<span class=\"sec-title\">(.*?)</span>', 'g')) val "
+				+             "from node where name like '%百病主治药%' ) as t "
+				+       ") as p "
+				+ "where name !='' group by name ";
 		JSONObject json = new JSONObject();
 
-		String url = "jdbc:postgresql://localhost:5432/notes";
-		String user = "postgres";
-		String passwd = "post";
 		try {
-			Class.forName("org.postgresql.Driver"); // otherwise, "can't find suitable driver..."
-
-			conn = DriverManager.getConnection(url, user, passwd);
-			stmt = conn.prepareStatement(query);
-			ResultSet rs = stmt.executeQuery();
+			ResultSet rs = stmt.executeQuery(query);
 
 			String rslt="[";
 			while (rs.next()) {
@@ -313,8 +286,6 @@ public class PostgresSQL {
 			rslt=rslt.replaceAll(",$", "]");
 			System.out.println(rslt);
 			return rslt;
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
 		} catch (SQLException ex) {
 			// insert into duplicate table
 			System.out.println(

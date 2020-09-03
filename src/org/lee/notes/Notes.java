@@ -32,7 +32,7 @@ import org.json.simple.parser.ParseException;
 public class Notes {
 	private static final Logger logger = Logger.getLogger(Notes.class);
 
-	PostgresSQL psSQL = new PostgresSQL();
+	NotesDB psSQL = new NotesDB();
 	
 	@POST
 	@Path("/addNote")
@@ -60,7 +60,7 @@ public class Notes {
 
 			psSQL.addNode(sname, template, jsonSrc.get("meta").toString(), jsonSrc.get("note").toString());
 
-			// if come from a parent node, that a relation is included:
+			//When coming from note_quill_x.html, there relation to parent node created in note_quill.html:
 			JSONObject objRel = (JSONObject)jsonObj.get("rel");
 			if(objRel != null) {
 				String strSrc = objRel.get("names").toString();
@@ -80,29 +80,84 @@ public class Notes {
 			return Response.status(Response.Status.PRECONDITION_FAILED).build();
 		}
 	}
-	
-	
+
+	@POST
+	@Path("/saveNode")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response saveNode(InputStream incomingData) {
+		String sb = "";
+		String line = null;
+
+		try {
+			BufferedReader in = new BufferedReader(new InputStreamReader(incomingData));
+			while ((line = in.readLine()) != null) {
+				sb = sb + line;
+			}
+			System.out.print("save note: " + sb);
+			JSONParser parser = new JSONParser();
+			JSONObject jsonObj = (JSONObject)parser.parse(sb);
+
+			JSONObject jsonSrc = (JSONObject) jsonObj.get("src");
+			
+			String sname, tname, template;
+			// save source
+			sname =(String)jsonSrc.get("name");
+			System.out.println(sname);
+			template = (String) jsonSrc.get("template");
+			int seq = Integer.parseInt( (String) jsonSrc.get("seq"));
+
+			psSQL.saveNode(seq, sname, template, jsonSrc.get("meta").toString(), jsonSrc.get("note").toString());
+
+			return Response.created(URI.create("/note_quill.html")).build();
+			// return true;
+
+		}  catch(ParseException pe){
+			
+	         return Response.status(Response.Status.PRECONDITION_FAILED).build();
+	      }catch (IOException e) {
+			e.printStackTrace();
+			return Response.status(Response.Status.PRECONDITION_FAILED).build();
+		}
+	}
+
+
 	@GET
-	@Path("/note/get/{name}")
-	@Produces(MediaType.TEXT_PLAIN)
-	//@Produces(MediaType.APPLICATION_JSON)
-	public String getNote(@PathParam("name") String msg) {
-	//public Response getNote(@PathParam("name") String msg) {
-		System.out.println("to get node: " + msg);
-		String rslt = psSQL.getNote(msg);
-		return rslt;
+	@Path("/note/get/{name}/{ver}")
+	//@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
+	//public String getNote(@PathParam("name") String msg) {
+	public Response getNote(@PathParam("name") String msg, @PathParam("ver") int ver) {
+		String rslt = psSQL.getNote(msg, ver);
+		//return rslt;
+		return Response.ok(rslt).build();
 	}
 	
 	@GET
-	@Path("/note/getByID/{id}")
-	@Produces(MediaType.TEXT_PLAIN)
-	//@Produces(MediaType.APPLICATION_JSON)
-	public String getNoteByID(@PathParam("id") int id) {
-		System.out.println("to getNodeByID: " + id);
-		String rslt = psSQL.getNoteBySeq(id);
-		return rslt;
+	@Path("/note/getByID/{id}/{ver}")
+	//@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getNoteByID(@PathParam("id") int id, @PathParam("ver") int ver) {
+		System.out.println("to getNodeByID: " + id + ", " + ver);
+		//if(ver==null)	ver=0;
+		String rslt = psSQL.getNoteBySeq(id, ver);
+		//return rslt;
+		System.out.println(rslt);
+		return Response.ok(rslt).build();
 	}
-	
+
+	@GET
+	@Path("/note/getVer/{id}")
+	//@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getNoteByID(@PathParam("id") int id) {
+		System.out.println("to ver. of : " + id);
+		//if(ver==null)	ver=0;
+		String rslt = psSQL.getNoteVers(id);
+		//return rslt;
+		System.out.println(rslt);
+		return Response.ok(rslt).build();
+	}
+
 	@POST
 	@Path("/addPhrase")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -228,15 +283,21 @@ public class Notes {
 			// return false;
 		}
 	}
-
 	
-	
+	@GET
+	@Path("/relation/getList")
+	@Produces(MediaType.APPLICATION_JSON)
+	//public Response getRelation(@PathParam("name") String msg) {
+	public Response getRelationList() {
+		String relLst = psSQL.getRelationList();
+		return Response.status(200).entity(relLst).build();
+	}
 	@GET
 	@Path("/relation/{name}")
 	@Produces(MediaType.APPLICATION_JSON)
 	//public Response getRelation(@PathParam("name") String msg) {
-	public Response getRelation() {
-		String relLst = psSQL.getRelationList();
+	public Response getRelation(@PathParam("name") String msg) {
+		String relLst = psSQL.getRelation(msg);
 		return Response.status(200).entity(relLst).build();
 	}
 	
@@ -244,19 +305,22 @@ public class Notes {
 	@Path("/template/getList")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response  getTemplateList() {
+		System.out.println("to get template list.");
 		String relLst = psSQL.getTemplateList();
 		return Response.ok(relLst).build();
 		//return relLst;
 	}
 	@GET
 	@Path("/template/get/{name}")
-	@Produces(MediaType.TEXT_PLAIN)
-	public String getTemplate(@PathParam("name") String msg) {
+	//@Produces(MediaType.TEXT_PLAIN)
+	//public String getTemplate(@PathParam("name") String msg) {
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getTemplate(@PathParam("name") String msg) {
 		System.out.println("to get template: " + msg);
 		String rslt = psSQL.getTemplate(msg);
 		System.out.println("    : " + rslt);
-		//return Response.ok(rslt).build();
-		return rslt;
+		return Response.ok(rslt).build();
+		//return rslt;
 	}
 	
 	@GET
