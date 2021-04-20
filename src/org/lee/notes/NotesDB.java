@@ -119,7 +119,7 @@ public class NotesDB {
 	}
 
 	public String getNoteVers(int seq) {
-		String sql = "select ver from node where seq = " + seq;
+		String sql = "select ver from node where seq = " + seq + " order by ver asc";
 		return sqlToJsonArrayString(sql);
 	}
 	

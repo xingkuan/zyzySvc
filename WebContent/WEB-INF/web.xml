@@ -62,4 +62,49 @@
     <url-pattern>/jingluo/*</url-pattern>
   </servlet-mapping>
  
+  <servlet>
+    <servlet-name>neo4j</servlet-name>
+    <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
+    <init-param>
+      <!-- param-name>javax.ws.rs.Application</param-name -->
+      <param-name>jersey.config.server.provider.packages</param-name>
+      <param-value>org.lee.InfobotREST</param-value>
+    </init-param>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>neo4j</servlet-name>
+    <url-pattern>/graph/*</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>es</servlet-name>
+    <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
+    <init-param>
+      <!-- param-name>javax.ws.rs.Application</param-name -->
+      <param-name>jersey.config.server.provider.packages</param-name>
+      <param-value>org.lee.InfobotREST</param-value>
+    </init-param>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>es</servlet-name>
+    <url-pattern>/es/*</url-pattern>
+  </servlet-mapping>
+ 
+   <servlet>
+    <servlet-name>ps</servlet-name>
+    <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
+    <init-param>
+      <!-- param-name>javax.ws.rs.Application</param-name -->
+      <param-name>jersey.config.server.provider.packages</param-name>
+      <param-value>org.lee.InfobotREST</param-value>
+    </init-param>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ps</servlet-name>
+    <url-pattern>/STG/*</url-pattern>
+  </servlet-mapping>
+ 
 </web-app>
