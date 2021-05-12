@@ -92,9 +92,9 @@ public class postgres {
 	}
 
 	@POST
-	@Path("crtSrcText")
+	@Path("srcSaveNewVersion")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response crtSrcText(InputStream incomingData) {
+	public Response srcSaveNewVersion(InputStream incomingData) {
 		System.out.println("crtSrcText() ");
 		String sb = "";
 		String line = null;
@@ -119,7 +119,48 @@ public class postgres {
 			long seq = Long.parseLong( (String) jsonSrc.get("seq"));
 			String a=jsonSrc.get("meta").toString();
 			String b=jsonSrc.get("srcContent").toString();
-			saveSrcStg(srcId, seq, sname, a, b);
+			saveSrcStgAsNewVer(srcId, seq, sname, a, b);
+
+//			return Response.created(URI.create("/note_quill.html")).build();
+			return Response.ok("done!", "text/plain").build();
+			// return true;
+		}  catch(ParseException pe){
+	         return Response.status(Response.Status.PRECONDITION_FAILED).build();
+	      }catch (IOException e) {
+			e.printStackTrace();
+			return Response.status(Response.Status.PRECONDITION_FAILED).build();
+		}
+	}
+
+	@POST
+	@Path("srcReplaceVersion0")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response srcReplaceVersion0(InputStream incomingData) {
+		System.out.println("crtSrcText() ");
+		String sb = "";
+		String line = null;
+
+		try {
+			BufferedReader in = new BufferedReader(new InputStreamReader(incomingData));
+			while ((line = in.readLine()) != null) {
+				sb = sb + line;
+			}
+			System.out.print("...: " + sb);
+			JSONParser parser = new JSONParser();
+			JSONObject jsonObj = (JSONObject)parser.parse(sb);
+
+			JSONObject jsonSrc = (JSONObject) jsonObj.get("src");
+			
+			String sname, tname, template;
+			// save source
+			sname =(String)jsonSrc.get("name");
+			System.out.println(sname);
+			//template = (String) jsonSrc.get("template");
+			int srcId=Integer.parseInt((String) jsonSrc.get("srcID"));
+			long seq = Long.parseLong( (String) jsonSrc.get("seq"));
+			String a=jsonSrc.get("meta").toString();
+			String b=jsonSrc.get("srcContent").toString();
+			saveSrcStgReplaceVer0(srcId, seq, sname, a, b);
 
 //			return Response.created(URI.create("/note_quill.html")).build();
 			return Response.ok("done!", "text/plain").build();
@@ -132,6 +173,7 @@ public class postgres {
 		}
 	}
 	
+
 	@GET
 	//@Path("getSeqPrev/{sid}/{seq}")
 	@Path("getSeqPrev")
@@ -274,7 +316,7 @@ public class postgres {
 		return true;
 	}
 	
-	private boolean saveSrcStg(int srcId, long seq, String name, String mt, String sb) {
+	private boolean saveSrcStgAsNewVer(int srcId, long seq, String name, String mt, String sb) {
 		String sql; 
 		try {
 			sql = "update info_stg set version = version-1 where seq="+seq+ " and src_id="+srcId;
@@ -290,7 +332,26 @@ public class postgres {
 		} 
 		return true;
 	}
-
+	private boolean saveSrcStgReplaceVer0(int srcId, long seq, String name, String mt, String sb) {
+		String sql; 
+		try {
+			sql = "delete from info_stg where seq="+seq+ " and src_id=" + srcId + " and version=0";
+			System.out.println(sql);
+			stmt.execute(sql);
+			sql = "INSERT INTO info_stg(src_id, seq, name, version, meta, content) VALUES "
+					+"(" + srcId + "," + seq + ", '" + name + "', 0, '" + mt +"','"+ sb+ "')";
+			System.out.println(sql);
+			stmt.execute(sql);
+			System.out.println(sb);
+		
+			//conn.commit();
+		} catch (SQLException ex) {
+			// insert into duplicate table
+			System.out.println(
+				"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
+		} 
+		return true;
+	}
 
 	@POST
 	@Path("/STG/addGeneralNote")
