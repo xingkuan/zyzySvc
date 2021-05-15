@@ -79,7 +79,7 @@ public class postgres {
 		//String rslt = getNoteBySeq(id, ver);
 		//String sql = "select name, val,template_name,meta from node where seq = " + id +" and ver="+ver;
 //TODO 2021.03.08
-		String sql = "select src_id, seq, name, version, meta, content from info_stg "
+		String sql = "select * from info_stg "
 				+ "where src_id= " + sid
 				+ " and seq = " + seq   //1010000 
 				+ " and version = " + ver
@@ -160,7 +160,8 @@ public class postgres {
 			long seq = Long.parseLong( (String) jsonSrc.get("seq"));
 			String a=jsonSrc.get("meta").toString();
 			String b=jsonSrc.get("srcContent").toString();
-			saveSrcStgReplaceVer0(srcId, seq, sname, a, b);
+			String prop=jsonSrc.get("properties").toString();
+			saveSrcStgReplaceVer0(srcId, seq, sname, a, b, prop);
 
 //			return Response.created(URI.create("/note_quill.html")).build();
 			return Response.ok("done!", "text/plain").build();
@@ -332,14 +333,14 @@ public class postgres {
 		} 
 		return true;
 	}
-	private boolean saveSrcStgReplaceVer0(int srcId, long seq, String name, String mt, String sb) {
+	private boolean saveSrcStgReplaceVer0(int srcId, long seq, String name, String mt, String sb, String prop) {
 		String sql; 
 		try {
 			sql = "delete from info_stg where seq="+seq+ " and src_id=" + srcId + " and version=0";
 			System.out.println(sql);
 			stmt.execute(sql);
-			sql = "INSERT INTO info_stg(src_id, seq, name, version, meta, content) VALUES "
-					+"(" + srcId + "," + seq + ", '" + name + "', 0, '" + mt +"','"+ sb+ "')";
+			sql = "INSERT INTO info_stg(src_id, seq, name, version, meta, content, properties) VALUES "
+					+"(" + srcId + "," + seq + ", '" + name + "', 0, '" + mt +"','"+ sb+ "','" + prop + "')";
 			System.out.println(sql);
 			stmt.execute(sql);
 			System.out.println(sb);
