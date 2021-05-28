@@ -52,6 +52,7 @@ public class JL {
 		try {
 			Class.forName("org.postgresql.Driver");
 			conn = DriverManager.getConnection(url, user, passwd);
+			conn.setAutoCommit(false);
 			stmt = conn.createStatement();
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -136,8 +137,8 @@ public class JL {
 	@POST
 	@Path("updatePoint")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response srcSaveNewVersion(InputStream incomingData) {
-		System.out.println("crtSrcText() ");
+	public Response updatePoit(InputStream incomingData) {
+		System.out.println("updatePoint() ");
 		String sb = "";
 		String line = null;
 
@@ -149,24 +150,24 @@ public class JL {
 			System.out.print("...: " + sb);
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObj = (JSONObject)parser.parse(sb);
-
-			JSONObject jsonSrc = (JSONObject) jsonObj.get("src");
 			
-			String sname, tname, template;
-			// save source
-			sname =(String)jsonSrc.get("name");
-			System.out.println(sname);
-			//template = (String) jsonSrc.get("template");
-			int srcId=Integer.parseInt((String) jsonSrc.get("srcID"));
-			long seq = Long.parseLong( (String) jsonSrc.get("seq"));
-			String a=jsonSrc.get("meta").toString();
-			String b=jsonSrc.get("srcContent").toString();
-			String sqlStr="....";
-			//setPointCo(sqlStr);
+			String lname, name;
+			JSONObject coor = new JSONObject();
 
-//			return Response.created(URI.create("/note_quill.html")).build();
+			lname =(String)jsonObj.get("line_name");
+			name =(String)jsonObj.get("name");
+
+			coor.put("x", Double.parseDouble( (String) jsonObj.get("x")));
+			coor.put("y", Double.parseDouble( (String) jsonObj.get("y")));
+			coor.put("z", Double.parseDouble( (String) jsonObj.get("z")));
+			
+			String sqlStr="update points set coor='" + coor +  "'" +
+					" where line_name='"+lname+"' "+
+					" and name='"+name+"'";
+			runDML(sqlStr);
+
 			return Response.ok("done!", "text/plain").build();
-			// return true;
+			//return true;
 		}  catch(ParseException pe){
 	         return Response.status(Response.Status.PRECONDITION_FAILED).build();
 	      }catch (IOException e) {
@@ -175,6 +176,17 @@ public class JL {
 		}
 	}
 
+	public boolean runDML(String sql) {
+		try {
+			stmt.execute(sql);
+			conn.commit();
+		} catch (SQLException ex) {
+			// insert into duplicate table
+			System.out.println(
+				"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
+		} 
+		return true;
+	}
 
 	private String sqlToJsonArrayString(String sql) {
 	    JSONArray jsonArray = new JSONArray();
