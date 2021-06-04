@@ -152,16 +152,19 @@ public class JL {
 			JSONObject jsonObj = (JSONObject)parser.parse(sb);
 			
 			String lname, name;
+			int seq=0;
 			JSONObject coor = new JSONObject();
 
 			lname =(String)jsonObj.get("line_name");
 			name =(String)jsonObj.get("name");
+			if (jsonObj.get("seq")!=null)
+				seq =Integer.parseInt((String)jsonObj.get("seq"));
 
 			coor.put("x", Double.parseDouble( (String) jsonObj.get("x")));
 			coor.put("y", Double.parseDouble( (String) jsonObj.get("y")));
 			coor.put("z", Double.parseDouble( (String) jsonObj.get("z")));
 			
-			String sqlStr="update points set coor='" + coor +  "'" +
+			String sqlStr="update points set coor='" + coor +  "', seq=" +seq +
 					" where line_name='"+lname+"' "+
 					" and name='"+name+"'";
 			runDML(sqlStr);
