@@ -111,7 +111,8 @@ public class JL {
 	public Response getPointsByJL(@PathParam("jl") String jl) {
 		System.out.println("to getPointsByJL: " + jl + ", " );
 		String sql = "select * from points "
-				+ "where line_name= '" + jl +"'"
+				+ "where line_name= '" + jl +"' "
+				+ "order by seq asc"
 				;
 		String rslt = sqlToJsonArrayString(sql);
 		
