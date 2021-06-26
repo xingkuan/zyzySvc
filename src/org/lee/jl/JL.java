@@ -136,7 +136,7 @@ public class JL {
 
 	
 	@POST
-	@Path("updatePoint")
+	@Path("upsertPoint")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response updatePoit(InputStream incomingData) {
 		System.out.println("updatePoint() ");
@@ -165,9 +165,10 @@ public class JL {
 			coor.put("y", Double.parseDouble( (String) jsonObj.get("y")));
 			coor.put("z", Double.parseDouble( (String) jsonObj.get("z")));
 			
-			String sqlStr="update points set coor='" + coor +  "', seq=" +seq +
-					" where line_name='"+lname+"' "+
-					" and name='"+name+"'";
+			String sqlStr="insert into points (line_name, name, seq, coor, isxw) values ("
+					+ "'"+lname+"', '"+name+"', " + seq + ", '" +coor + "', false) "
+					+ "on conflict on constraint points_pkey do "
+					+ "update set coor='" + coor +  "', seq=" +seq ;
 			runDML(sqlStr);
 
 			return Response.ok("done!", "text/plain").build();
