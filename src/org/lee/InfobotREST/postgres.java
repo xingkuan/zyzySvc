@@ -62,6 +62,33 @@ public class postgres {
 		}
 	}
 	
+	@GET
+	@Path("getJLs")
+	//@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getJLs() {
+		String sql = "select seq, name, meta from info_stg where src_id=3 and meta like 'type:jingluo%'";
+		String rslt = sqlToJsonArrayString(sql);
+		
+		return Response.ok(rslt).build();
+	}
+
+	@GET
+	@Path("getStgContentByName/{srcId}/{name}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response geStgContentByName(
+			@PathParam("srcId") int srcId,
+			@PathParam("name") String name) {
+		String sql = "select * from info_stg where src_id=" + srcId + " "
+				+ "and name='"+name+"'"
+				;
+		String rslt = sqlToJsonArrayString(sql);
+		
+		//return rslt;
+		System.out.println(rslt);
+		return Response.ok(rslt).build();
+	}
+	
 	public void finalize(){  //just want to see GC in action.
 		logger.info("after postgres object GC ...");
 	}

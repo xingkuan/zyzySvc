@@ -84,17 +84,20 @@ public class JL {
 		return Response.ok(rslt).build();
 	}
 
+	//TODO 20210728: moved to postgres.java 
 	@GET
-	@Path("getPointByName/{jName}/{pName}")
+	@Path("getPointByName/{mName}/{jName}/{pName}")
 	//@Path("getByID/{id}")
 	//@Produces(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getPointByName(@PathParam("jName") String jname,
+	public Response getPointByName(
+			@PathParam("mName") String mname,
+			@PathParam("jName") String jname,
 			@PathParam("pName") String pname) {
 		System.out.println("to getPointByName: " + jname + ", " + pname);
 		String sql = "select * from points "
 				+ "where line_name= '" + jname + "' and "
-				+ "name='"+pname+"'"
+				+ "name='"+pname+"' and model_name='"+mname+"'"
 				;
 		String rslt = sqlToJsonArrayString(sql);
 		
@@ -103,21 +106,23 @@ public class JL {
 		return Response.ok(rslt).build();
 	}
 
+	//TODO 20210728: moved to postgres.java 
 	@GET
-	@Path("getPointsByJL/{jl}")
+	@Path("getPointsByJL/{modelName}/{jl}")
 	//@Path("getByID/{id}")
 	//@Produces(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getPointsByJL(@PathParam("jl") String jl) {
-		System.out.println("to getPointsByJL: " + jl + ", " );
+	public Response getPointsByJL(@PathParam("modelName") String mn,
+			@PathParam("jl") String jl) {
+		//System.out.println("to getPointsByJL: " + jl + ", " );
 		String sql = "select * from points "
-				+ "where line_name= '" + jl +"' "
+				+ "where model_name='"+mn+"' and line_name= '" + jl +"' "
 				+ "order by seq asc"
 				;
 		String rslt = sqlToJsonArrayString(sql);
 		
 		//return rslt;
-		System.out.println(rslt);
+		//System.out.println(rslt);
 		return Response.ok(rslt).build();
 	}
 
@@ -130,7 +135,7 @@ public class JL {
 		String rslt = sqlToJsonArrayString(sql);
 		
 		//return rslt;
-		System.out.println(rslt);
+		//System.out.println(rslt);
 		return Response.ok(rslt).build();
 	}
 
@@ -148,25 +153,26 @@ public class JL {
 			while ((line = in.readLine()) != null) {
 				sb = sb + line;
 			}
-			System.out.print("...: " + sb);
+			//System.out.print("...: " + sb);
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObj = (JSONObject)parser.parse(sb);
 			
-			String lname, name;
+			String mname, lname, name;
 			int seq=0;
 			JSONObject coor = new JSONObject();
 
+			mname =(String)jsonObj.get("model_name");
 			lname =(String)jsonObj.get("line_name");
 			name =(String)jsonObj.get("name");
-			if (jsonObj.get("seq")!=null)
-				seq =Integer.parseInt((String)jsonObj.get("seq"));
+			if (jsonObj.get("uiSeq")!=null)
+				seq =Integer.parseInt((String)jsonObj.get("uiSeq"));
 
 			coor.put("x", Double.parseDouble( (String) jsonObj.get("x")));
 			coor.put("y", Double.parseDouble( (String) jsonObj.get("y")));
 			coor.put("z", Double.parseDouble( (String) jsonObj.get("z")));
 			
-			String sqlStr="insert into points (line_name, name, seq, coor, isxw) values ("
-					+ "'"+lname+"', '"+name+"', " + seq + ", '" +coor + "', false) "
+			String sqlStr="insert into points (model_name, line_name, name, seq, coor, isxw) values ("
+					+ "'"+mname+"', '"+lname+"', '"+name+"', " + seq + ", '" +coor + "', false) "
 					+ "on conflict on constraint points_pkey do "
 					+ "update set coor='" + coor +  "', seq=" +seq ;
 			runDML(sqlStr);
