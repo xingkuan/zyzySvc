@@ -1,4 +1,4 @@
-package org.lee.jl;
+package org.lee.uidb;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -37,16 +37,16 @@ import org.lee.notes.Notes;
 import org.lee.notes.NotesDB;
 
 @Path("/")
-public class JL {
+public class Xuewei {
 	private static final Logger logger = Logger.getLogger(Notes.class);
-	String url = "jdbc:postgresql://localhost:5432/jl";
+	String url = "jdbc:postgresql://localhost:5432/uidb";
 	String user = "postgres";
 	String passwd = "post";
 
 	private Connection conn = null;
 	private Statement stmt = null;
 
-	public JL(/*@Context UriInfo uriInfo,
+	public Xuewei(/*@Context UriInfo uriInfo,
             @PathParam("num") int pathNum*/) {
 		logger.info("create postgres object...");
 		try {
@@ -68,6 +68,28 @@ public class JL {
 	}
 
 	@GET
+	@Path("getPointByName/{mName}/{jName}/{pName}")
+	//@Path("getByID/{id}")
+	//@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getPointByName(
+			@PathParam("mName") String mname,
+			@PathParam("jName") String jname,
+			@PathParam("pName") String pname) {
+		System.out.println("to getPointByName: " + jname + ", " + pname);
+		String sql = "select id,name,line_name,coor,seq,isxw,model_name,array_to_string(sub_lines,',') as sub_lines from points "
+				+ "where line_name= '" + jname + "' and "
+				+ "name='"+pname+"' and model_name='"+mname+"'"
+				;
+		String rslt = sqlToJsonArrayString(sql);
+		
+		//return rslt;
+		System.out.println(rslt);
+		return Response.ok(rslt).build();
+	}
+	
+/* not needed	
+	@GET
 	@Path("getPointByID/{id}")
 	//@Path("getByID/{id}")
 	//@Produces(MediaType.TEXT_PLAIN)
@@ -85,37 +107,17 @@ public class JL {
 	}
 
 	//TODO 20210728: moved to postgres.java 
-	@GET
-	@Path("getPointByName/{mName}/{jName}/{pName}")
-	//@Path("getByID/{id}")
-	//@Produces(MediaType.TEXT_PLAIN)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getPointByName(
-			@PathParam("mName") String mname,
-			@PathParam("jName") String jname,
-			@PathParam("pName") String pname) {
-		System.out.println("to getPointByName: " + jname + ", " + pname);
-		String sql = "select * from points "
-				+ "where line_name= '" + jname + "' and "
-				+ "name='"+pname+"' and model_name='"+mname+"'"
-				;
-		String rslt = sqlToJsonArrayString(sql);
-		
-		//return rslt;
-		System.out.println(rslt);
-		return Response.ok(rslt).build();
-	}
 
-	//TODO 20210728: moved to postgres.java 
+	//TODO:2021.08.02
 	@GET
-	@Path("getPointsByJL/{modelName}/{jl}")
+	@Path("getSubLinesByJL/{modelName}/{jl}")
 	//@Path("getByID/{id}")
 	//@Produces(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getPointsByJL(@PathParam("modelName") String mn,
+	public Response getSubLinesByJL(@PathParam("modelName") String mn,
 			@PathParam("jl") String jl) {
 		//System.out.println("to getPointsByJL: " + jl + ", " );
-		String sql = "select * from points "
+		String sql = "select distinct unnest(sub_lines) from points "
 				+ "where model_name='"+mn+"' and line_name= '" + jl +"' "
 				+ "order by seq asc"
 				;
@@ -125,7 +127,28 @@ public class JL {
 		//System.out.println(rslt);
 		return Response.ok(rslt).build();
 	}
+*/
+	//Only 3D coordinates are stored in JL; the r (moved to postgres.java 
+	@GET
+	@Path("getPointsOfJL/{modelName}/{jl}")
+	//@Path("getByID/{id}")
+	//@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getPointsByJL(@PathParam("modelName") String mn,
+			@PathParam("jl") String jl) {
+		//System.out.println("to getPointsByJL: " + jl + ", " );
+		String sql = "select name, unnest(sub_lines) as sLine, seq, coor, isxw from points "
+				+ "where model_name='"+mn+"' and line_name= '" + jl +"' "
+				+ "order by sLine asc, seq asc"
+				;
+		String rslt = sqlToJsonArrayString(sql);
+		
+		//return rslt;
+		//System.out.println(rslt);
+		return Response.ok(rslt).build();
+	}
 
+/*20210803: moved to InfoboREST	
 	@GET
 	@Path("getJLs")
 	//@Produces(MediaType.TEXT_PLAIN)
@@ -138,7 +161,7 @@ public class JL {
 		//System.out.println(rslt);
 		return Response.ok(rslt).build();
 	}
-
+*/
 	
 	@POST
 	@Path("upsertPoint")
@@ -157,7 +180,7 @@ public class JL {
 			JSONParser parser = new JSONParser();
 			JSONObject jsonObj = (JSONObject)parser.parse(sb);
 			
-			String mname, lname, name;
+			String mname, lname, name, subNum;
 			int seq=0;
 			JSONObject coor = new JSONObject();
 
@@ -166,15 +189,16 @@ public class JL {
 			name =(String)jsonObj.get("name");
 			if (jsonObj.get("uiSeq")!=null)
 				seq =Integer.parseInt((String)jsonObj.get("uiSeq"));
+			subNum =(String)jsonObj.get("subNum");
 
 			coor.put("x", Double.parseDouble( (String) jsonObj.get("x")));
 			coor.put("y", Double.parseDouble( (String) jsonObj.get("y")));
 			coor.put("z", Double.parseDouble( (String) jsonObj.get("z")));
 			
-			String sqlStr="insert into points (model_name, line_name, name, seq, coor, isxw) values ("
-					+ "'"+mname+"', '"+lname+"', '"+name+"', " + seq + ", '" +coor + "', false) "
+			String sqlStr="insert into points (model_name, line_name, name, seq, coor, isxw, sub_lines) values ("
+					+ "'"+mname+"', '"+lname+"', '"+name+"', " + seq + ", '" +coor + "', false, '{"+subNum+"}') "
 					+ "on conflict on constraint points_pkey do "
-					+ "update set coor='" + coor +  "', seq=" +seq ;
+					+ "update set coor='" + coor +  "', seq=" +seq + ", sub_lines='{"+subNum+"}'";
 			runDML(sqlStr);
 
 			return Response.ok("done!", "text/plain").build();

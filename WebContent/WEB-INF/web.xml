@@ -108,18 +108,18 @@
   </servlet-mapping>
 
    <servlet>
-    <servlet-name>jl</servlet-name>
+    <servlet-name>xw</servlet-name>
     <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
     <init-param>
       <!-- param-name>javax.ws.rs.Application</param-name -->
       <param-name>jersey.config.server.provider.packages</param-name>
-      <param-value>org.lee.jl</param-value>
+      <param-value>org.lee.uidb</param-value>
     </init-param>
     <load-on-startup>1</load-on-startup>
   </servlet>
   <servlet-mapping>
-    <servlet-name>jl</servlet-name>
-    <url-pattern>/JL/*</url-pattern>
+    <servlet-name>xw</servlet-name>
+    <url-pattern>/XW/*</url-pattern>
   </servlet-mapping>
  
 </web-app>
