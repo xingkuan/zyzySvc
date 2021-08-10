@@ -166,7 +166,7 @@ public class Xuewei {
 	@POST
 	@Path("upsertPoint")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response updatePoit(InputStream incomingData) {
+	public Response updatePoint(InputStream incomingData) {
 		System.out.println("updatePoint() ");
 		String sb = "";
 		String line = null;
@@ -211,6 +211,48 @@ public class Xuewei {
 		}
 	}
 
+	@POST
+	@Path("updateCoor")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response updateCoor(InputStream incomingData) {
+		String sb = "";
+		String line = null;
+
+		try {
+			BufferedReader in = new BufferedReader(new InputStreamReader(incomingData));
+			while ((line = in.readLine()) != null) {
+				sb = sb + line;
+			}
+			System.out.print("...: " + sb);
+			JSONParser parser = new JSONParser();
+			JSONObject jsonObj = (JSONObject)parser.parse(sb);
+			
+			String mname, lname, name, subNum;
+			int seq=0;
+			//JSONObject coor = new JSONObject();
+			JSONObject coor;
+
+			mname =(String)jsonObj.get("model_name");
+			lname =(String)jsonObj.get("line_name");
+			name =(String)jsonObj.get("name");
+			coor=(JSONObject) jsonObj.get("coor");
+			String sqlStr="update points set coor='" + coor +  "' "
+					+ "where model_name='" + mname + "' "
+					+ "and line_name='" +lname + "' "
+					+ "and name='"+name+"'";
+			System.out.print(sqlStr);
+			runDML(sqlStr);
+
+			return Response.ok("done!", "text/plain").build();
+			//return true;
+		}  catch(ParseException pe){
+	         return Response.status(Response.Status.PRECONDITION_FAILED).build();
+	      }catch (IOException e) {
+			e.printStackTrace();
+			return Response.status(Response.Status.PRECONDITION_FAILED).build();
+		}
+	}
+	
 	public boolean runDML(String sql) {
 		try {
 			stmt.execute(sql);
