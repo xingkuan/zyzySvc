@@ -238,7 +238,22 @@ public class postgres {
 		return Response.ok(rslt).build();
 	}
 
-	
+
+	@GET
+	@Path("getSTGSrcs")
+	//@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getSTGSrcs() {
+		String sql = "select * from info_src order by id asc"
+				;
+		String rslt = sqlToJsonArrayString(sql);
+		
+		//return rslt;
+		System.out.println(sql);
+		System.out.println(rslt);
+		return Response.ok(rslt).build();
+	}
+
 	@GET
 	@Path("getSTGRegTEXT/{id}")
 	//@Produces(MediaType.TEXT_PLAIN)
