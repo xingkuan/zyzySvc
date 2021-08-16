@@ -287,5 +287,4 @@ public class Xuewei {
 		
 	    return jsonArray.toString();
 	}
-
 }
