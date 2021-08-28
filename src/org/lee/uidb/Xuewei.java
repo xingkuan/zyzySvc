@@ -137,7 +137,7 @@ public class Xuewei {
 	public Response getPointsByJL(@PathParam("modelName") String mn,
 			@PathParam("jl") String jl) {
 		//System.out.println("to getPointsByJL: " + jl + ", " );
-		String sql = "select name, unnest(sub_lines) as sLine, seq, coor, isxw from points "
+		String sql = "select name, unnest(sub_lines) as sLine, seq, coor, facing, isxw from points "
 				+ "where model_name='"+mn+"' and line_name= '" + jl +"' "
 				+ "order by sLine asc, seq asc"
 				;
@@ -182,23 +182,28 @@ public class Xuewei {
 			
 			String mname, lname, name, subNum;
 			int seq=0;
+			long id;
 			JSONObject coor = new JSONObject();
 
 			mname =(String)jsonObj.get("model_name");
 			lname =(String)jsonObj.get("line_name");
 			name =(String)jsonObj.get("name");
+			id =(long) jsonObj.get("id");
 			if (jsonObj.get("uiSeq")!=null)
 				seq =Integer.parseInt((String)jsonObj.get("uiSeq"));
 			subNum =(String)jsonObj.get("subNum");
 
-			coor.put("x", Double.parseDouble( (String) jsonObj.get("x")));
-			coor.put("y", Double.parseDouble( (String) jsonObj.get("y")));
-			coor.put("z", Double.parseDouble( (String) jsonObj.get("z")));
+			//coor.put("x", Double.parseDouble( (String) jsonObj.get("x")));
+			//coor.put("y", Double.parseDouble( (String) jsonObj.get("y")));
+			//coor.put("z", Double.parseDouble( (String) jsonObj.get("z")));
+			coor=(JSONObject) jsonObj.get("coor");
+			JSONObject facing=(JSONObject) jsonObj.get("facing");
 			
-			String sqlStr="insert into points (model_name, line_name, name, seq, coor, isxw, sub_lines) values ("
-					+ "'"+mname+"', '"+lname+"', '"+name+"', " + seq + ", '" +coor + "', false, '{"+subNum+"}') "
+			String sqlStr="insert into points (id, model_name, line_name, name, seq, coor, facing, isxw, sub_lines) values ("
+					+ id + ",'"+mname+"', '"+lname+"', '"+name+"', " + seq + ", '" +coor + "', '"+facing+"',false, '{"+subNum+"}') "
 					+ "on conflict on constraint points_pkey do "
-					+ "update set coor='" + coor +  "', seq=" +seq + ", sub_lines='{"+subNum+"}'";
+					+ "update set id="+id+", coor='" + coor +  "', facing='" + facing + "', seq=" +seq + ", sub_lines='{"+subNum+"}'";
+			System.out.println(sqlStr);
 			runDML(sqlStr);
 
 			return Response.ok("done!", "text/plain").build();
