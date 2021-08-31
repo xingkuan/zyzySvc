@@ -77,10 +77,11 @@ public class Xuewei {
 			@PathParam("jName") String jname,
 			@PathParam("pName") String pname) {
 		System.out.println("to getPointByName: " + jname + ", " + pname);
-		String sql = "select id,name,line_name,coor,seq,isxw,model_name,array_to_string(sub_lines,',') as sub_lines from points "
-				+ "where line_name= '" + jname + "' and "
-				+ "name='"+pname+"' and model_name='"+mname+"'"
+		String sql = "select id,name,line_name,coor,seqs->line_name->'seq' as seq,isxw,model_name,array_to_string(sub_lines,',') as sub_lines from points "
+				//+ "where line_name like '%" + jname + "%' and "
+				+ "where name='"+pname+"' and model_name='"+mname+"'"
 				;
+		System.out.println(sql);
 		String rslt = sqlToJsonArrayString(sql);
 		
 		//return rslt;
@@ -137,10 +138,12 @@ public class Xuewei {
 	public Response getPointsByJL(@PathParam("modelName") String mn,
 			@PathParam("jl") String jl) {
 		//System.out.println("to getPointsByJL: " + jl + ", " );
-		String sql = "select name, unnest(sub_lines) as sLine, seq, coor, facing, isxw from points "
-				+ "where model_name='"+mn+"' and line_name= '" + jl +"' "
+		String sql = "select name, json_array_elements((seqs->line_name->'sub_lines')::json)::text::int as sLine, seqs->line_name->'seq' as seq, coor, facing, isxw from points "
+				//+ "where model_name='"+mn+"' and line_name like '%" + jl +"%' "
+				+ "where model_name='"+mn+"' and seqs->'" + jl +"' is not null "
 				+ "order by sLine asc, seq asc"
 				;
+		System.out.println(sql);
 		String rslt = sqlToJsonArrayString(sql);
 		
 		//return rslt;
@@ -198,13 +201,62 @@ public class Xuewei {
 			//coor.put("z", Double.parseDouble( (String) jsonObj.get("z")));
 			coor=(JSONObject) jsonObj.get("coor");
 			JSONObject facing=(JSONObject) jsonObj.get("facing");
-			
-			String sqlStr="insert into points (id, model_name, line_name, name, seq, coor, facing, isxw, sub_lines) values ("
-					+ id + ",'"+mname+"', '"+lname+"', '"+name+"', " + seq + ", '" +coor + "', '"+facing+"',false, '{"+subNum+"}') "
-					+ "on conflict on constraint points_pkey do "
-					+ "update set id="+id+", coor='" + coor +  "', facing='" + facing + "', seq=" +seq + ", sub_lines='{"+subNum+"}'";
+		
+//insert into testj values ('test2', '{"c2":3}', 'c2');
+//update testj set col2=col2 || '{"c3":30}' where col1='test2';	
+//update testj set col2=jsonb_set(jsonb_set(col2, '{test3,seq}', '11', true), '{test3,slines, 1}', '1', true) where col1='test3'
+//	update testj set col2=col2 || '{"test4": {"seq": 14}}' where col1='test3';
+
+/*			insert into points (id, model_name, line_name, name,
+					seqs,
+					coor, facing, isxw)
+					values
+					(
+					1108260,'asian_female_teen', '足少阴肾经', '俞府穴',
+					'{"足少阴肾经":{"seq":260,"sub_lines":[0]}}',
+					'{"x":0.4592373093823242,"y":12.092047264833193,"z":0.3509064469326453}', '{"x":0.23345268118978194,"y":0.24367671513931619,"z":0.9413402701171424}',false)
+					on conflict on constraint points_pkey do update
+					set id=1108260, coor='{"x":0.4592373093823242,"y":12.092047264833193,"z":0.3509064469326453}', facing='{"x":0.23345268118978194,"y":0.24367671513931619,"z":0.9413402701171424}',
+					seqs=jsonb_set(jsonb_set(seqs, '{足少阴肾经,seq}','260', true), '{足少阴肾经,slines,0}', '0',true),
+					line_name = case position('足少阴肾经' in name)  when 0 then line_name ||',足少阴肾经'  else line_name end;
+
+					update points
+					set seqs=jsonb_set(jsonb_set(seqs, '{足少阴肾经,seq}','260', true), '{足少阴肾经,slines,0}', '0',true)
+					where name='俞府穴';
+*/
+					
+			String sqlStr="insert into points (id, model_name, line_name, name, seqs, coor, facing, isxw) values ("
+					+ id + ",'"+mname+"', '" + lname + "', '" + name + "', "     
+					+ "'{\"" + lname + "\":{\"seq\":" + seq + ",\"sub_lines\":["+subNum+"]}}', '"  //{"a lName":{"seq":10, [0]}}  
+					+ coor + "', '"+facing+"',false) "
+					;
 			System.out.println(sqlStr);
-			runDML(sqlStr);
+/*
+ 					+ "on conflict on constraint points_pkey do "
+					+ "update set id="+id+", coor='" + coor +  "', facing='" + facing 
+					+ "', seqs=jsonb_set(jsonb_set(seqs, '{"+lname+",seq}','"+seq+"', true),"   //seq val 
+					+ " '{" + lname + ",slines," + subNum + "}', '" + subNum + "',true), " 
+					//+ subNum + , true), "
+					+ " line_name = case position('"+ lname + "' in name) "
+					   + " when 0 then line_name ||'," + lname + "' " //add a new line_name
+					   + " else line_name end "     //otherwise, keep it the same.
+					//+ ", sub_lines='{"+subNum+"}'"
+
+ */
+			int sqlCode = runDML(sqlStr);
+			if (sqlCode==1) {
+/*				sqlStr= "update points set id="+id+", coor='" + coor +  "', facing='" + facing 
+						+ "', seqs=jsonb_set(jsonb_set(seqs, '{"+lname+",seq}','"+seq+"', true),"    
+						+ " '{" + lname + ",slines," + subNum + "}', '" + subNum + "',true) " 
+						+ " where name='" + name + "' and model_name='"+mname+"'"
+*/
+				sqlStr = "update points "
+						+ " set seqs = seqs || '{\"" + lname + "\":{\"seq\":" + seq + ",\"sub_lines\":[" + subNum + "]}}' "
+						+ " where name = '" + name + "' and model_name='" + mname + "'";
+				;
+				System.out.println(sqlStr);
+				sqlCode = runDML(sqlStr);
+			}
 
 			return Response.ok("done!", "text/plain").build();
 			//return true;
@@ -258,16 +310,24 @@ public class Xuewei {
 		}
 	}
 	
-	public boolean runDML(String sql) {
+	public int runDML(String sql)  {
 		try {
 			stmt.execute(sql);
 			conn.commit();
 		} catch (SQLException ex) {
 			// insert into duplicate table
-			System.out.println(
-				"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
+			System.out.println("Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
+			try {
+				conn.rollback();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if (ex.getSQLState().equals("23505"))
+				return 1;
+
 		} 
-		return true;
+		return 0;
 	}
 
 	private String sqlToJsonArrayString(String sql) {
