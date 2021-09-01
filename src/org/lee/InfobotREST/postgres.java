@@ -201,6 +201,23 @@ public class postgres {
 		}
 	}
 	
+	@GET
+	//@Path("getSeqPrev/{sid}/{seq}")
+	@Path("getDocId")
+	//@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getSrcId(@QueryParam("sid") int sid,
+			@QueryParam("sname") String name) {
+		String sql = "select max(seq) seq from info_stg "
+				+ "where src_id= " + sid
+				+ " and version=0" 
+				+ " and name='" + name + "'";
+		String rslt = sqlToJsonArrayString(sql);
+		
+		//return rslt;
+		System.out.println(rslt);
+		return Response.ok(rslt).build();
+	}
 
 	@GET
 	//@Path("getSeqPrev/{sid}/{seq}")

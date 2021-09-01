@@ -77,7 +77,7 @@ public class Xuewei {
 			@PathParam("jName") String jname,
 			@PathParam("pName") String pname) {
 		System.out.println("to getPointByName: " + jname + ", " + pname);
-		String sql = "select id,name,line_name,coor,seqs->line_name->'seq' as seq,isxw,model_name,array_to_string(sub_lines,',') as sub_lines from points "
+		String sql = "select id,name,line_name,coor,seqs->'"+jname+"'->'seq' as seq,isxw,model_name,array_to_string(sub_lines,',') as sub_lines from points "
 				//+ "where line_name like '%" + jname + "%' and "
 				+ "where name='"+pname+"' and model_name='"+mname+"'"
 				;
@@ -138,7 +138,7 @@ public class Xuewei {
 	public Response getPointsByJL(@PathParam("modelName") String mn,
 			@PathParam("jl") String jl) {
 		//System.out.println("to getPointsByJL: " + jl + ", " );
-		String sql = "select name, json_array_elements((seqs->line_name->'sub_lines')::json)::text::int as sLine, seqs->line_name->'seq' as seq, coor, facing, isxw from points "
+		String sql = "select name, json_array_elements((seqs->'"+jl+"'->'sub_lines')::json)::text::int as sLine, seqs->'"+jl+"'->'seq' as seq, coor, facing, isxw from points "
 				//+ "where model_name='"+mn+"' and line_name like '%" + jl +"%' "
 				+ "where model_name='"+mn+"' and seqs->'" + jl +"' is not null "
 				+ "order by sLine asc, seq asc"
@@ -147,7 +147,7 @@ public class Xuewei {
 		String rslt = sqlToJsonArrayString(sql);
 		
 		//return rslt;
-		//System.out.println(rslt);
+		System.out.println(rslt);
 		return Response.ok(rslt).build();
 	}
 
@@ -251,7 +251,8 @@ public class Xuewei {
 						+ " where name='" + name + "' and model_name='"+mname+"'"
 */
 				sqlStr = "update points "
-						+ " set seqs = seqs || '{\"" + lname + "\":{\"seq\":" + seq + ",\"sub_lines\":[" + subNum + "]}}' "
+						+ "set id=" + id + ", coor = '" + coor + "', facing='" + facing+"', "
+						+ " seqs = seqs || '{\"" + lname + "\":{\"seq\":" + seq + ",\"sub_lines\":[" + subNum + "]}}' "
 						+ " where name = '" + name + "' and model_name='" + mname + "'";
 				;
 				System.out.println(sqlStr);
