@@ -288,16 +288,26 @@ public class Xuewei {
 			String mname, lname, name, subNum;
 			int seq=0;
 			//JSONObject coor = new JSONObject();
-			JSONObject coor;
+			JSONObject coor, facing;
 
 			mname =(String)jsonObj.get("model_name");
 			lname =(String)jsonObj.get("line_name");
 			name =(String)jsonObj.get("name");
 			coor=(JSONObject) jsonObj.get("coor");
-			String sqlStr="update points set coor='" + coor +  "' "
+			facing=(JSONObject) jsonObj.get("facing");
+			String sqlStr;
+			if (facing == null) {
+				sqlStr="update points set coor='" + coor +  "' "
 					+ "where model_name='" + mname + "' "
 					+ "and line_name='" +lname + "' "
 					+ "and name='"+name+"'";
+			}else {
+				sqlStr="update points set coor='" + coor +  "', "
+						+ "facing = '" + facing + "' "
+						+ "where model_name='" + mname + "' "
+						+ "and line_name='" +lname + "' "
+						+ "and name='"+name+"'";
+			}
 			System.out.print(sqlStr);
 			runDML(sqlStr);
 
