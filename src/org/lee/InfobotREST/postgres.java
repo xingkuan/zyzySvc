@@ -67,7 +67,7 @@ public class postgres {
 	//@Produces(MediaType.TEXT_PLAIN)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getJLs() {
-		String sql = "select seq, name, meta from info_stg where src_id=3 and meta like 'type:jingluo%'";
+		String sql = "select seq, name, meta from info_stg where src_id=3 and meta like 'type:jingluo%' order by seq";
 		String rslt = sqlToJsonArrayString(sql);
 		
 		return Response.ok(rslt).build();
@@ -146,7 +146,14 @@ public class postgres {
 			long seq = Long.parseLong( (String) jsonSrc.get("seq"));
 			String a=jsonSrc.get("meta").toString();
 			String b=jsonSrc.get("srcContent").toString();
-			saveSrcStgAsNewVer(srcId, seq, sname, a, b);
+			//saveSrcStgAsNewVer(srcId, seq, sname, a, b);
+			String sql = "update info_stg set version = version-1 where seq="+seq+ " and src_id="+srcId;
+			System.out.println(sql);
+			execDMLsql(sql);
+			sql = "INSERT INTO info_stg(src_id, seq, name, version, meta, content) VALUES "
+					+"(" + srcId + "," + seq + ", '" + sname + "', 0, '" + a +"','"+ b+ "')";
+			System.out.println(sql);
+			execDMLsql(sql);
 
 //			return Response.created(URI.create("/note_quill.html")).build();
 			return Response.ok("done!", "text/plain").build();
@@ -188,7 +195,14 @@ public class postgres {
 			String a=jsonSrc.get("meta").toString();
 			String b=jsonSrc.get("srcContent").toString();
 			String prop=jsonSrc.get("properties").toString();
-			saveSrcStgReplaceVer0(srcId, seq, sname, a, b, prop);
+			//saveSrcStgReplaceVer0(srcId, seq, sname, a, b, prop);
+			String sql = "delete from info_stg where seq="+seq+ " and src_id=" + srcId + " and version=0";
+			System.out.println(sql);
+			execDMLsql(sql);
+			sql = "INSERT INTO info_stg(src_id, seq, name, version, meta, content, properties) VALUES "
+					+"(" + srcId + "," + seq + ", '" + sname + "', 0, '" + a +"','"+ b+ "','" + prop + "')";
+			System.out.println(sql);
+			execDMLsql(sql);
 
 //			return Response.created(URI.create("/note_quill.html")).build();
 			return Response.ok("done!", "text/plain").build();
@@ -375,7 +389,7 @@ public class postgres {
 
 		return true;
 	}
-	
+/*	
 	private boolean saveSrcStgAsNewVer(int srcId, long seq, String name, String mt, String sb) {
 		String sql; 
 		try {
@@ -392,7 +406,21 @@ public class postgres {
 		} 
 		return true;
 	}
-	private boolean saveSrcStgReplaceVer0(int srcId, long seq, String name, String mt, String sb, String prop) {
+*/
+	private boolean execDMLsql(String strSQL) {
+		try {
+			System.out.println(strSQL);
+			stmt.execute(strSQL);
+			//conn.commit();
+		} catch (SQLException ex) {
+			System.out.println(
+				"Caught SQLException " + ex.getErrorCode() + "/" + ex.getSQLState() + " " + ex.getMessage());
+			return false;
+		} 
+		
+		return true;
+	}
+/*	private boolean saveSrcStgReplaceVer0(int srcId, long seq, String name, String mt, String sb, String prop) {
 		String sql; 
 		try {
 			sql = "delete from info_stg where seq="+seq+ " and src_id=" + srcId + " and version=0";
@@ -412,7 +440,7 @@ public class postgres {
 		} 
 		return true;
 	}
-
+*/
 	@POST
 	@Path("/STG/addGeneralNote")
 	@Produces(MediaType.APPLICATION_JSON)
